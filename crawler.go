@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -11,7 +10,6 @@ import (
 )
 
 var worklist = make(chan []string)
-var unseenlinks = make(chan string)
 
 func main() {
 	var n int
@@ -38,6 +36,7 @@ func main() {
 	}
 }
 
+//crawl a helper function to fasciliate concurrent access to extract
 func crawl(url string) []string {
 	var tokens = make(chan struct{}, 20)
 	tokens <- struct{}{}
@@ -46,15 +45,7 @@ func crawl(url string) []string {
 	return list
 }
 
-func getBody(domain string) (io.Reader, error) {
-	res, err := http.Get(domain)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get domain: %v", domain)
-	}
-	defer res.Body.Close()
-	return res.Body, nil
-}
-
+//extract extracts links of provided URL
 func extract(domain string) []string {
 	var links []string
 
@@ -74,11 +65,10 @@ func extract(domain string) []string {
 				if a.Key == "href" {
 					url, err := res.Request.URL.Parse(a.Val)
 					if err != nil {
-						fmt.Printf("the error is: %v", err)
 						continue
-					} else {
-						links = append(links, url.String())
 					}
+					links = append(links, url.String())
+
 				}
 			}
 		}
